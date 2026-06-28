@@ -231,6 +231,10 @@
       🔊 Say It!
     </button>
 
+    <div id="speechWarning" style="display:none; font-size:0.85rem; color:#92400e; background:#fef3c7; border-radius:10px; padding:10px 14px; width:100%; text-align:center;">
+      🔇 Sound isn't supported in this browser.<br>Try opening in <strong>Chrome</strong> for audio! 🎵
+    </div>
+
     <div class="fun-fact" id="funFact" style="display:none"></div>
 
   </div>
@@ -511,12 +515,27 @@
 
     // Pre-load voices as soon as they are available (required on Android Chrome)
     let voices = [];
+    let speechSupported = ('speechSynthesis' in window);
+
     function loadVoices() {
       voices = speechSynthesis.getVoices();
     }
-    loadVoices();
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = loadVoices;
+    if (speechSupported) {
+      loadVoices();
+      if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = loadVoices;
+      }
+      // After a short wait, if still no voices, mark as unsupported
+      setTimeout(() => {
+        if (speechSynthesis.getVoices().length === 0) {
+          speechSupported = false;
+          document.getElementById('speakBtn').style.display = 'none';
+          document.getElementById('speechWarning').style.display = 'block';
+        }
+      }, 1500);
+    } else {
+      document.getElementById('speakBtn').style.display = 'none';
+      document.getElementById('speechWarning').style.display = 'block';
     }
 
     select.addEventListener('change', () => {
@@ -537,7 +556,7 @@
       funFactEl.textContent = '💡 ' + s.fact;
 
       // Speak immediately inside the user-gesture event (no setTimeout — required on Android)
-      speakShape();
+      if (speechSupported) speakShape();
     });
 
     function speakShape() {
