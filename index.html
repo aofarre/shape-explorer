@@ -509,6 +509,16 @@
     const speakBtn   = document.getElementById('speakBtn');
     const funFactEl  = document.getElementById('funFact');
 
+    // Pre-load voices as soon as they are available (required on Android Chrome)
+    let voices = [];
+    function loadVoices() {
+      voices = speechSynthesis.getVoices();
+    }
+    loadVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     select.addEventListener('change', () => {
       const key = select.value;
       if (!key || !shapes[key]) {
@@ -526,17 +536,21 @@
       funFactEl.style.display = 'block';
       funFactEl.textContent = '💡 ' + s.fact;
 
-      // auto-speak after a short delay
-      setTimeout(() => speakShape(), 400);
+      // Speak immediately inside the user-gesture event (no setTimeout — required on Android)
+      speakShape();
     });
 
     function speakShape() {
       const key = select.value;
       if (!key || !shapes[key]) return;
+      if (!('speechSynthesis' in window)) return;
       const utterance = new SpeechSynthesisUtterance(shapes[key].label);
-      utterance.rate  = 0.85;
-      utterance.pitch = 1.1;
+      utterance.rate   = 0.85;
+      utterance.pitch  = 1.1;
       utterance.volume = 1;
+      // Prefer an English voice if available
+      const enVoice = voices.find(v => v.lang.startsWith('en'));
+      if (enVoice) utterance.voice = enVoice;
       speechSynthesis.cancel();
       speechSynthesis.speak(utterance);
     }
